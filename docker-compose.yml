@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: population_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: superpassword
+      POSTGRES_DB: population_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d population_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  get_data:
+    build: .
+    container_name: get_data_service
+    command: python src/main.py get_data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: superpassword
+      POSTGRES_DB: population_db
+      POSTGRES_HOST: db
+      DATA_SOURCE: wikipedia
+    depends_on:
+      db:
+        condition: service_healthy
+
+  print_data:
+    build: .
+    container_name: print_data_service
+    command: python src/main.py print_data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: superpassword
+      POSTGRES_DB: population_db
+      POSTGRES_HOST: db
+      DATA_SOURCE: wikipedia
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
